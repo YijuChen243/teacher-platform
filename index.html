@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>我的教學平台</title>
+<title>個人教學平台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
@@ -257,6 +257,32 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .prev-info-row span:last-child{color:var(--txt);font-weight:500;}
 .prev-actions{padding:14px 22px;border-top:1px solid var(--bdr);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}
 
+
+/* ══ PASSWORD LOCK ══ */
+.lock-screen{position:fixed;inset:0;z-index:9999;background:var(--bg0);display:flex;align-items:center;justify-content:center;}
+.lock-screen.hidden{display:none;}
+.lock-box{background:var(--bg2);border:1px solid var(--bdr-hi);border-radius:24px;padding:48px 44px;width:min(420px,90vw);text-align:center;box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:scaleIn .3s cubic-bezier(.22,.68,0,1.2);}
+.lock-logo{width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent-d));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:28px;color:#fff;box-shadow:0 0 28px var(--accent-g);}
+.lock-title{font-size:20px;font-weight:500;margin-bottom:6px;}
+.lock-sub{font-size:14px;color:var(--txt2);margin-bottom:32px;line-height:1.6;}
+.lock-input-wrap{position:relative;margin-bottom:14px;}
+.lock-input{width:100%;padding:13px 48px 13px 18px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--bg3);color:var(--txt);font-size:16px;font-family:inherit;letter-spacing:2px;transition:all .2s;text-align:center;}
+.lock-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-g);}
+.lock-input.shake{animation:shake .35s ease;}
+.lock-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--txt3);font-size:18px;padding:4px;}
+.lock-eye:hover{color:var(--txt2);}
+.lock-btn{width:100%;padding:13px;background:var(--accent);color:#071a10;border:none;border-radius:var(--r);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.lock-btn:hover{background:#4fe0a0;box-shadow:0 0 24px var(--accent-g);}
+.lock-err{font-size:13px;color:var(--red);margin-top:12px;min-height:20px;transition:opacity .2s;}
+.lock-err.hidden{opacity:0;}
+.lock-hint{font-size:12px;color:var(--txt3);margin-top:20px;line-height:1.7;}
+.lock-hint a{color:var(--accent);text-decoration:none;}
+.lock-hint a:hover{text-decoration:underline;}
+.lock-change-wrap{margin-top:16px;padding-top:16px;border-top:1px solid var(--bdr);}
+.lock-change-btn{background:none;border:none;color:var(--txt3);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;margin:0 auto;}
+.lock-change-btn:hover{color:var(--txt2);}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -264,6 +290,49 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </style>
 </head>
 <body>
+
+<!-- PASSWORD LOCK SCREEN -->
+<div class="lock-screen" id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-logo"><i class="ti ti-school"></i></div>
+    <div class="lock-title">我的教學平台</div>
+    <div class="lock-sub">請輸入密碼以繼續使用</div>
+    <div class="lock-input-wrap">
+      <input class="lock-input" type="password" id="lock-pwd" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')doUnlock()" autocomplete="current-password"/>
+      <button class="lock-eye" id="lock-eye" onclick="toggleEye()" tabindex="-1">
+        <i class="ti ti-eye" id="lock-eye-icon"></i>
+      </button>
+    </div>
+    <button class="lock-btn" onclick="doUnlock()"><i class="ti ti-lock-open"></i>解鎖</button>
+    <div class="lock-err hidden" id="lock-err">密碼錯誤，請再試一次</div>
+    <div class="lock-hint">
+      預設密碼：<strong>teacher2025</strong><br>
+      <span style="font-size:11px;color:var(--txt3)">可在下方修改密碼，密碼以 SHA-256 加密儲存於本機</span>
+    </div>
+    <div class="lock-change-wrap">
+      <button class="lock-change-btn" onclick="showChangePwd()"><i class="ti ti-key" style="font-size:13px"></i>修改密碼</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay hidden" id="change-pwd-modal">
+  <div class="modal" style="max-width:400px">
+    <h2><i class="ti ti-key"></i>修改密碼</h2>
+    <label>目前密碼</label>
+    <input type="password" id="cp-current" placeholder="輸入目前密碼"/>
+    <label>新密碼 <span style="color:var(--red)">*</span></label>
+    <input type="password" id="cp-new" placeholder="至少 6 個字元"/>
+    <label>確認新密碼</label>
+    <input type="password" id="cp-confirm" placeholder="再輸入一次新密碼"/>
+    <div class="modal-note" id="cp-err" style="color:var(--red);min-height:18px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="document.getElementById('change-pwd-modal').classList.add('hidden')">取消</button>
+      <button class="btn btn-a" onclick="doChangePwd()"><i class="ti ti-check"></i>確認修改</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL -->
 <div class="modal-overlay hidden" id="settings-modal">
@@ -635,6 +704,89 @@ function clearT(){document.getElementById('t-in').value='';document.getElementBy
 function copyT(){var t=document.getElementById('t-out').value;if(!t)return;navigator.clipboard.writeText(t).then(function(){var b=document.getElementById('copy-btn');b.innerHTML='<i class="ti ti-check" style="font-size:13px"></i>已複製';setTimeout(function(){b.innerHTML='<i class="ti ti-copy" style="font-size:13px"></i>複製';},1500);}).catch(function(){alert('請手動複製');});}
 function swapLang(){var a=document.getElementById('t-in').value,b=document.getElementById('t-out').value;document.getElementById('t-in').value=b;document.getElementById('t-out').value=a;}
 function speak(){var text=window._speakText||document.getElementById('t-out').value;var lang=window._speakLang||'en-US';if(!text)return;window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.lang=lang;window.speechSynthesis.speak(u);}
+
+/* ══ PASSWORD LOCK ══ */
+(function(){
+  // Default hash for "teacher2025" — change via UI
+  var DEFAULT_HASH = '7e92a63ac8ddad62080f9b412d4ac60fbbe15fcd87168ca58a5f1679b2b1d0cc';
+  var HASH_KEY = 'app_pwd_hash';
+
+  async function sha256(str){
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function getHash(){ return localStorage.getItem(HASH_KEY) || DEFAULT_HASH; }
+
+  // Check if already unlocked this session
+  if(sessionStorage.getItem('unlocked')==='1'){
+    document.getElementById('lock-screen').classList.add('hidden');
+  }
+
+  window.doUnlock = async function(){
+    var pwd = document.getElementById('lock-pwd').value;
+    if(!pwd) return;
+    var h = await sha256(pwd);
+    if(h === getHash()){
+      sessionStorage.setItem('unlocked','1');
+      var ls = document.getElementById('lock-screen');
+      ls.style.opacity='1';
+      ls.style.transition='opacity .4s';
+      ls.style.opacity='0';
+      setTimeout(function(){ ls.classList.add('hidden'); ls.style.opacity=''; },400);
+    } else {
+      var inp = document.getElementById('lock-pwd');
+      var err = document.getElementById('lock-err');
+      inp.classList.remove('shake');
+      void inp.offsetWidth; // reflow
+      inp.classList.add('shake');
+      err.classList.remove('hidden');
+      inp.value='';
+      setTimeout(function(){ err.classList.add('hidden'); },2500);
+    }
+  };
+
+  window.toggleEye = function(){
+    var inp = document.getElementById('lock-pwd');
+    var icon = document.getElementById('lock-eye-icon');
+    if(inp.type==='password'){ inp.type='text'; icon.className='ti ti-eye-off'; }
+    else { inp.type='password'; icon.className='ti ti-eye'; }
+  };
+
+  window.showChangePwd = function(){
+    document.getElementById('change-pwd-modal').classList.remove('hidden');
+  };
+
+  window.doChangePwd = async function(){
+    var cur = document.getElementById('cp-current').value;
+    var nw  = document.getElementById('cp-new').value;
+    var cfm = document.getElementById('cp-confirm').value;
+    var errEl = document.getElementById('cp-err');
+    if(!cur||!nw||!cfm){ errEl.textContent='請填寫所有欄位'; return; }
+    var curH = await sha256(cur);
+    if(curH !== getHash()){ errEl.textContent='目前密碼錯誤'; return; }
+    if(nw.length < 6){ errEl.textContent='新密碼至少 6 個字元'; return; }
+    if(nw !== cfm){ errEl.textContent='兩次密碼不相符'; return; }
+    var newH = await sha256(nw);
+    localStorage.setItem(HASH_KEY, newH);
+    errEl.style.color='var(--accent)';
+    errEl.textContent='密碼已更新！';
+    setTimeout(function(){
+      document.getElementById('change-pwd-modal').classList.add('hidden');
+      errEl.textContent=''; errEl.style.color='var(--red)';
+      document.getElementById('cp-current').value='';
+      document.getElementById('cp-new').value='';
+      document.getElementById('cp-confirm').value='';
+    },1200);
+  };
+
+  // Focus input on load
+  setTimeout(function(){
+    var inp = document.getElementById('lock-pwd');
+    if(inp) inp.focus();
+  },300);
+})();
+
 </script>
 </body>
 </html>
