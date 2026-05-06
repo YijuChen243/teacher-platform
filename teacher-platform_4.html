@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>我的教學平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  let db = null;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    window._db = db; window._fbReady = true;
+    onSnapshot(collection(db,"notes"), snap => { window._fbNotes=[]; snap.forEach(d=>window._fbNotes.push({id:d.id,...d.data()})); if(window.renderNotesFromFB) window.renderNotesFromFB(); });
+    onSnapshot(collection(db,"files"), snap => { window._fbFiles=[]; snap.forEach(d=>window._fbFiles.push({id:d.id,...d.data()})); if(window.renderFilesFromFB) window.renderFilesFromFB(); });
+  } catch(e) { window._fbReady = false; }
+  window._saveNote   = async n => { if(!window._fbReady) return; await setDoc(doc(db,"notes",String(n.id)),n); };
+  window._deleteNote = async id => { if(!window._fbReady) return; await deleteDoc(doc(db,"notes",String(id))); };
+  window._saveFile   = async f => { if(!window._fbReady) return; await setDoc(doc(db,"files",String(f.id)),f); };
+  window._deleteFile = async id => { if(!window._fbReady) return; await deleteDoc(doc(db,"files",String(id))); };
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg0:#0c0e14;
+  --bg1:#12151e;
+  --bg2:#181b25;
+  --bg3:#1f2333;
+  --bg4:#272c3d;
+  --glass:rgba(255,255,255,0.035);
+  --glass-b:rgba(255,255,255,0.06);
+  --glass-hv:rgba(255,255,255,0.055);
+  --bdr:rgba(255,255,255,0.07);
+  --bdr-hi:rgba(255,255,255,0.13);
+  --accent:#3ecf8e;
+  --accent-d:#2a8f65;
+  --accent-g:rgba(62,207,142,0.15);
+  --accent2:#5aa0f0;
+  --accent2-g:rgba(90,160,240,0.15);
+  --red:#f06060;
+  --amber:#f0a840;
+  --txt:#dde1ed;
+  --txt2:#7a8199;
+  --txt3:#474e65;
+  --r:10px;
+  --rl:16px;
+  --rxl:20px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans TC','DM Sans',sans-serif;background:var(--bg0);color:var(--txt);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 55% 38% at 10% 15%,rgba(62,207,142,0.055) 0%,transparent 60%),radial-gradient(ellipse 45% 32% at 90% 80%,rgba(90,160,240,0.045) 0%,transparent 55%);pointer-events:none;z-index:0;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(10px);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--bg2);border:1px solid var(--bdr-hi);border-radius:var(--rxl);padding:32px;width:min(520px,90vw);box-shadow:0 24px 60px rgba(0,0,0,0.55);}
+.modal h2{font-size:17px;font-weight:500;margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+.modal h2 i{color:var(--accent);font-size:20px;}
+.modal label{font-size:11px;color:var(--txt2);display:block;margin-bottom:6px;margin-top:16px;text-transform:uppercase;letter-spacing:.6px;}
+.modal input{width:100%;padding:10px 14px;border:1px solid var(--bdr);border-radius:var(--r);font-size:14px;font-family:inherit;background:var(--bg3);color:var(--txt);transition:border-color .2s,box-shadow .2s;}
+.modal input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-g);}
+.modal-note{font-size:12px;color:var(--txt3);margin-top:7px;line-height:1.7;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:24px;}
+
+/* ── HEADER ── */
+.header{position:sticky;top:0;z-index:100;background:rgba(12,14,20,0.88);backdrop-filter:blur(22px);border-bottom:1px solid var(--bdr);padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:11px;}
+.logo-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-d));display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;box-shadow:0 0 18px var(--accent-g);}
+.logo-txt{font-size:15px;font-weight:500;letter-spacing:.2px;color:var(--txt);}
+.logo-txt em{font-style:normal;color:var(--accent);}
+.nav-tabs{display:flex;gap:2px;background:var(--glass);border:1px solid var(--bdr);border-radius:var(--rl);padding:4px;}
+.tb{padding:6px 16px;border:none;background:transparent;border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--txt2);display:flex;align-items:center;gap:6px;font-family:inherit;white-space:nowrap;transition:all .18s;}
+.tb i{font-size:15px;}
+.tb:hover{color:var(--txt);background:var(--glass-hv);}
+.tb.on{background:var(--bg3);color:var(--txt);border:1px solid var(--bdr-hi);}
+.tb.on i{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:10px;}
+.hbadge{font-size:11px;padding:4px 11px;border-radius:20px;font-weight:500;border:1px solid;display:flex;align-items:center;gap:5px;}
+.hbadge.ok{color:var(--accent);border-color:rgba(62,207,142,0.28);background:rgba(62,207,142,0.07);}
+.hbadge.off{color:var(--txt3);border-color:var(--bdr);background:transparent;}
+.hbtn{padding:7px 14px;border:1px solid var(--bdr);border-radius:var(--r);background:transparent;cursor:pointer;font-size:13px;color:var(--txt2);font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .18s;}
+.hbtn:hover{border-color:var(--bdr-hi);color:var(--txt);background:var(--glass-hv);}
+
+/* ── CONTENT ── */
+.content{padding:28px;max-width:1140px;margin:0 auto;position:relative;z-index:1;}
+.panel{display:none;}
+.panel.on{display:block;animation:slideUp .28s cubic-bezier(.22,.68,0,1.2);}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── SECTION HEADING ── */
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
+.sec-head .accent-bar{width:3px;height:20px;border-radius:2px;background:var(--accent);}
+.sec-head h2{font-size:17px;font-weight:500;}
+
+/* ── CARD ── */
+.card{background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rxl);overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.35);}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 18px;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .18s;border:none;}
+.btn-a{background:var(--accent);color:#071a10;}
+.btn-a:hover{background:#4fe0a0;box-shadow:0 0 22px var(--accent-g);}
+.btn-g{background:var(--glass);color:var(--txt2);border:1px solid var(--bdr);}
+.btn-g:hover{background:var(--glass-hv);border-color:var(--bdr-hi);color:var(--txt);}
+.btn-d{background:rgba(240,96,96,0.1);color:var(--red);border:1px solid rgba(240,96,96,0.2);}
+.btn-d:hover{background:rgba(240,96,96,0.2);}
+
+/* ══ YT ══ */
+.yt-bar{padding:16px 22px;border-bottom:1px solid var(--bdr);display:flex;gap:10px;align-items:center;background:var(--glass);}
+.yt-inp{flex:1;padding:10px 16px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;transition:all .2s;}
+.yt-inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-g);}
+.yt-scr{background:#080a10;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;}
+.yt-scr iframe{width:100%;height:100%;border:none;display:none;}
+.yt-ph{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.yt-ph-ring{width:80px;height:80px;border-radius:50%;border:1px solid rgba(240,96,96,0.25);background:rgba(240,96,96,0.07);display:flex;align-items:center;justify-content:center;}
+.yt-ph-ring i{font-size:34px;color:var(--red);}
+.yt-ph p{color:var(--txt3);font-size:14px;}
+.yt-err{display:none;flex-direction:column;align-items:center;gap:14px;}
+.yt-err-ring{width:72px;height:72px;border-radius:50%;background:rgba(240,96,96,0.1);display:flex;align-items:center;justify-content:center;}
+.yt-err-ring i{font-size:30px;color:var(--red);}
+.yt-err p{color:var(--txt2);font-size:13px;text-align:center;line-height:1.7;}
+.yt-ctrl{padding:13px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--glass);}
+.sp-lbl{font-size:12px;color:var(--txt3);}
+.sp-row{display:flex;gap:3px;}
+.sp-btn{padding:5px 10px;border:1px solid var(--bdr);border-radius:7px;background:transparent;cursor:pointer;font-size:12px;color:var(--txt2);font-family:inherit;transition:all .15s;}
+.sp-btn:hover{border-color:var(--bdr-hi);color:var(--txt);}
+.sp-btn.on{background:var(--accent);color:#071a10;border-color:var(--accent);font-weight:600;}
+.ad-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(62,207,142,0.08);border:1px solid rgba(62,207,142,0.18);border-radius:20px;font-size:11px;color:var(--accent);font-weight:500;}
+.yt-tip{margin-top:14px;padding:14px 18px;background:rgba(240,168,64,0.06);border:1px solid rgba(240,168,64,0.14);border-radius:var(--rl);font-size:13px;color:#c8985a;line-height:1.8;}
+.yt-tip strong{color:var(--amber);}
+
+/* ══ DRIVE ══ */
+.drive-wrap{display:grid;grid-template-columns:200px 1fr;min-height:490px;}
+.drive-side{border-right:1px solid var(--bdr);padding:16px 0;background:var(--glass);}
+.side-lbl{padding:0 18px 10px;font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;}
+.side-item{padding:9px 18px;display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--txt2);transition:all .14s;border-left:2px solid transparent;user-select:none;}
+.side-item:hover{background:var(--glass-hv);color:var(--txt);}
+.side-item.on{background:var(--glass-b);color:var(--accent);border-left-color:var(--accent);}
+.side-item i{font-size:15px;}
+.side-item.drag-ov{background:var(--accent-g);border-left-color:var(--accent);color:var(--accent);}
+.drive-main{display:flex;flex-direction:column;}
+.drive-tb{padding:13px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:8px;background:var(--glass);}
+.drive-srch{flex:1;padding:8px 14px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--bg3);color:var(--txt);font-size:13px;font-family:inherit;transition:all .2s;}
+.drive-srch:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-g);}
+.files-area{padding:18px 20px;flex:1;}
+.drag-hint{font-size:12px;color:var(--txt3);display:flex;align-items:center;gap:5px;margin-bottom:14px;}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:10px;}
+.fc{background:var(--glass);border:1px solid var(--bdr);border-radius:var(--rl);padding:16px 10px;text-align:center;cursor:pointer;position:relative;transition:all .18s;}
+.fc:hover{background:var(--glass-hv);border-color:var(--bdr-hi);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3);}
+.fc:hover::after{content:'預覽';position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--accent);letter-spacing:.3px;opacity:.8;}
+.fc.dragging{opacity:.25;transform:scale(.94);}
+.fc.drag-ov-card{border:1.5px dashed var(--accent);background:var(--accent-g);}
+.fc .del{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:rgba(240,96,96,0.12);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:11px;color:var(--red);}
+.fc:hover .del{display:flex;}
+.fi{font-size:30px;margin-bottom:8px;}
+.fi.doc{color:var(--accent2)}.fi.pdf{color:var(--red)}.fi.img{color:var(--accent)}.fi.vid{color:#f08050}.fi.ppt{color:var(--amber)}.fi.other{color:var(--txt3)}
+.fn{font-size:12px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fs{font-size:11px;color:var(--txt3);margin-top:3px;}
+.srow{padding:12px 20px;border-top:1px solid var(--bdr);display:flex;align-items:center;gap:10px;background:var(--glass);}
+.sbar{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.sfill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.slbl{font-size:12px;color:var(--txt2);white-space:nowrap;}
+.fbpill{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;}
+.fbon{background:rgba(62,207,142,0.1);color:var(--accent);border:1px solid rgba(62,207,142,0.2);}
+.fboff{background:var(--glass);color:var(--txt3);border:1px solid var(--bdr);}
+
+/* ══ NOTES ══ */
+.notes-tb{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
+.notes-ttl{font-size:17px;font-weight:500;flex:1;display:flex;align-items:center;gap:9px;}
+.notes-ttl i{color:var(--accent);font-size:20px;}
+.cdots{display:flex;gap:7px;}
+.cdot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.cdot:hover,.cdot.on{border-color:rgba(255,255,255,0.45);transform:scale(1.2);}
+.ngrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:18px;}
+.sn{border-radius:var(--rl);padding:18px;min-height:140px;position:relative;transition:transform .18s,box-shadow .18s;box-shadow:0 4px 22px rgba(0,0,0,0.22);}
+.sn:hover{transform:translateY(-3px) rotate(.3deg);box-shadow:0 10px 32px rgba(0,0,0,0.32);}
+.sn-del{position:absolute;top:10px;right:10px;width:24px;height:24px;background:rgba(0,0,0,.15);border:none;border-radius:50%;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:13px;color:rgba(0,0,0,.5);}
+.sn:hover .sn-del{display:flex;}
+.sn-txt{font-size:16px;line-height:1.75;resize:none;border:none;background:transparent;width:100%;min-height:88px;font-family:inherit;color:rgba(0,0,0,.78);font-weight:500;}
+.sn-txt:focus{outline:none;}
+.sn-date{font-size:11px;color:rgba(0,0,0,.32);margin-top:10px;}
+.notes-sync{font-size:12px;color:var(--txt3);display:flex;align-items:center;gap:4px;}
+
+/* ══ TRANS ══ */
+.mode-bar{padding:12px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:6px;background:var(--glass);flex-wrap:wrap;}
+.mode-btn{padding:5px 14px;border:1px solid var(--bdr);border-radius:20px;background:transparent;cursor:pointer;font-size:12px;color:var(--txt2);font-family:inherit;transition:all .16s;}
+.mode-btn:hover{border-color:var(--bdr-hi);color:var(--txt);}
+.mode-btn.on{background:var(--accent);color:#071a10;border-color:var(--accent);font-weight:500;}
+.trans-body{display:grid;grid-template-columns:1fr 44px 1fr;}
+.tpane{display:flex;flex-direction:column;}
+.thd{padding:13px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--glass);}
+.tlang{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;}
+.tta{flex:1;padding:20px 22px;border:none;background:transparent;font-size:16px;line-height:1.8;resize:none;color:var(--txt);font-family:inherit;min-height:160px;}
+.tta:focus{outline:none;}
+.tta.res{color:var(--accent);}
+.tdiv{display:flex;align-items:center;justify-content:center;border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);}
+.swap-btn{width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--bdr);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:18px;transition:all .2s;}
+.swap-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 12px var(--accent-g);}
+.tft{padding:12px 22px;border-top:1px solid var(--bdr);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--glass);}
+.qchip{padding:5px 12px;border:1px solid var(--bdr);border-radius:20px;font-size:12px;color:var(--txt2);cursor:pointer;background:transparent;font-family:inherit;transition:all .15s;}
+.qchip:hover{border-color:var(--accent);color:var(--accent);}
+.t-extra{border-top:1px solid var(--bdr);padding:20px 22px;display:none;background:var(--glass);}
+.ex-word{font-size:22px;font-weight:500;color:var(--accent);}
+.ex-phon{font-size:14px;color:var(--txt2);margin-top:6px;display:flex;align-items:center;gap:10px;}
+.speak-btn{padding:5px 12px;background:var(--glass);border:1px solid var(--bdr);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--txt2);font-family:inherit;display:flex;align-items:center;gap:4px;transition:all .15s;}
+.speak-btn:hover{border-color:var(--accent);color:var(--accent);}
+.ex-list{margin-top:16px;display:flex;flex-direction:column;gap:10px;}
+.ex-card{background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--rl);padding:12px 16px;}
+.ex-en{font-size:14px;line-height:1.65;color:var(--txt);}
+.ex-zh{font-size:13px;color:var(--txt2);margin-top:4px;}
+.api-warn{margin-top:14px;padding:12px 18px;background:rgba(240,168,64,0.06);border:1px solid rgba(240,168,64,0.18);border-radius:var(--rl);font-size:13px;color:#c8985a;line-height:1.7;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.blink{animation:blink 1s ease-in-out infinite;}
+
+/* ══ PREVIEW MODAL ══ */
+.prev-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(14px);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .2s ease;}
+.prev-overlay.hidden{display:none;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.prev-box{background:var(--bg2);border:1px solid var(--bdr-hi);border-radius:var(--rxl);width:min(880px,95vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.7);animation:scaleIn .22s cubic-bezier(.22,.68,0,1.2);}
+@keyframes scaleIn{from{opacity:0;transform:scale(.93);}to{opacity:1;transform:scale(1);}}
+.prev-hd{padding:16px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.prev-hd-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.prev-hd-info{flex:1;min-width:0;}
+.prev-hd-name{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prev-hd-meta{font-size:12px;color:var(--txt2);margin-top:2px;}
+.prev-close{width:34px;height:34px;border-radius:50%;background:var(--glass);border:1px solid var(--bdr);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:18px;transition:all .15s;flex-shrink:0;}
+.prev-close:hover{background:rgba(240,96,96,0.15);border-color:rgba(240,96,96,0.3);color:var(--red);}
+.prev-body{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;min-height:0;padding:0;}
+/* image */
+.prev-img{max-width:100%;max-height:75vh;border-radius:var(--r);object-fit:contain;display:block;}
+/* pdf / video */
+.prev-pdf{width:100%;height:70vh;border:none;border-radius:0 0 var(--rxl) var(--rxl);}
+.prev-vid{width:100%;max-height:70vh;border-radius:0 0 var(--rxl) var(--rxl);background:#000;outline:none;}
+/* info panel for other types */
+.prev-info{padding:32px 40px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;}
+.prev-info-icon{font-size:56px;margin-bottom:4px;}
+.prev-info-label{font-size:18px;font-weight:500;color:var(--txt);}
+.prev-info-sub{font-size:14px;color:var(--txt2);line-height:1.7;}
+.prev-info-rows{width:100%;max-width:340px;margin-top:8px;border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden;}
+.prev-info-row{display:flex;justify-content:space-between;padding:10px 16px;font-size:13px;border-bottom:1px solid var(--bdr);}
+.prev-info-row:last-child{border-bottom:none;}
+.prev-info-row span:first-child{color:var(--txt2);}
+.prev-info-row span:last-child{color:var(--txt);font-weight:500;}
+.prev-actions{padding:14px 22px;border-top:1px solid var(--bdr);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="settings-modal">
+  <div class="modal">
+    <h2><i class="ti ti-settings"></i>平台設定</h2>
+    <label>OpenAI API Key <span style="color:var(--red)">*</span></label>
+    <input type="password" id="cfg-openai" placeholder="sk-…"/>
+    <div class="modal-note">翻譯使用 GPT-4o-mini，費用極低（每百萬 token 約 $0.15）。</div>
+    <label>Firebase API Key</label>
+    <input type="text" id="cfg-fb-apikey" placeholder="AIza…"/>
+    <label>Firebase Project ID</label>
+    <input type="text" id="cfg-fb-project" placeholder="your-project-id"/>
+    <label>Firebase Auth Domain</label>
+    <input type="text" id="cfg-fb-auth" placeholder="your-project.firebaseapp.com"/>
+    <div class="modal-note">Firebase 用於便利貼與檔案清單跨裝置同步。未設定則使用本機儲存。</div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="closeSettings()">取消</button>
+      <button class="btn btn-a" onclick="saveSettings()"><i class="ti ti-device-floppy"></i>儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="prev-overlay hidden" id="prev-overlay" onclick="closePrev(event)">
+  <div class="prev-box" id="prev-box">
+    <div class="prev-hd">
+      <div class="prev-hd-icon" id="prev-hd-icon"></div>
+      <div class="prev-hd-info">
+        <div class="prev-hd-name" id="prev-hd-name"></div>
+        <div class="prev-hd-meta" id="prev-hd-meta"></div>
+      </div>
+      <button class="prev-close" onclick="hidePrev()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="prev-body" id="prev-body"></div>
+    <div class="prev-actions" id="prev-actions">
+      <button class="btn btn-g" onclick="hidePrev()"><i class="ti ti-x"></i>關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon"><i class="ti ti-school"></i></div>
+    <span class="logo-txt">教學<em>平台</em></span>
+  </div>
+  <nav class="nav-tabs">
+    <button class="tb on" onclick="swTab('yt',this)"><i class="ti ti-brand-youtube"></i>YT 播放器</button>
+    <button class="tb" onclick="swTab('drive',this)"><i class="ti ti-cloud"></i>雲端硬碟</button>
+    <button class="tb" onclick="swTab('notes',this)"><i class="ti ti-note"></i>便利貼</button>
+    <button class="tb" onclick="swTab('trans',this)"><i class="ti ti-language"></i>英文翻譯</button>
+  </nav>
+  <div class="header-right">
+    <span class="hbadge off" id="fb-status-badge"><i class="ti ti-circle-filled" style="font-size:8px"></i>本機模式</span>
+    <button class="hbtn" onclick="openSettings()"><i class="ti ti-settings"></i>設定</button>
+  </div>
+</header>
+
+<main class="content">
+
+  <!-- YT -->
+  <div class="panel on" id="panel-yt">
+    <div class="sec-head"><span class="accent-bar"></span><h2>無廣告 YouTube 播放器</h2></div>
+    <div class="card">
+      <div class="yt-bar">
+        <i class="ti ti-brand-youtube" style="font-size:22px;color:var(--red);flex-shrink:0"></i>
+        <input class="yt-inp" type="text" id="yt-url" placeholder="貼上 YouTube 網址…"/>
+        <button class="btn btn-a" onclick="loadYT()"><i class="ti ti-player-play"></i>播放</button>
+        <button class="btn btn-g" onclick="openYT()"><i class="ti ti-external-link"></i>開新分頁</button>
+        <span class="ad-badge"><i class="ti ti-ad-off" style="font-size:12px"></i>無廣告</span>
+      </div>
+      <div class="yt-scr" id="yt-screen">
+        <iframe id="yt-if" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>
+        <div class="yt-ph" id="yt-ph">
+          <div class="yt-ph-ring"><i class="ti ti-player-play"></i></div>
+          <p>貼上 YouTube 網址後按播放</p>
+        </div>
+        <div class="yt-err" id="yt-err">
+          <div class="yt-err-ring"><i class="ti ti-alert-triangle"></i></div>
+          <p>此影片禁止嵌入播放（錯誤 153）<br>通常為版權音樂或 VEVO 影片</p>
+          <button class="btn btn-d" onclick="openYT()"><i class="ti ti-external-link"></i>前往 YouTube 觀看</button>
+        </div>
+      </div>
+      <div class="yt-ctrl">
+        <span class="sp-lbl">播放速度</span>
+        <div class="sp-row">
+          <button class="sp-btn" onclick="setSpd(.5,this)">0.5×</button>
+          <button class="sp-btn" onclick="setSpd(.75,this)">0.75×</button>
+          <button class="sp-btn on" onclick="setSpd(1,this)">1×</button>
+          <button class="sp-btn" onclick="setSpd(1.25,this)">1.25×</button>
+          <button class="sp-btn" onclick="setSpd(1.5,this)">1.5×</button>
+          <button class="sp-btn" onclick="setSpd(2,this)">2×</button>
+        </div>
+        <span style="margin-left:auto;font-size:12px;color:var(--txt3)">版權音樂請使用「開新分頁」</span>
+      </div>
+    </div>
+    <div class="yt-tip" style="margin-top:14px">💡 <strong>關於廣告：</strong>嵌入播放本身<strong>無廣告</strong>，但版權音樂（VEVO）作者設定禁止嵌入，請點「開新分頁」。建議安裝 <strong>uBlock Origin</strong>（免費）可在 YouTube 徹底封鎖廣告。</div>
+  </div>
+
+  <!-- DRIVE -->
+  <div class="panel" id="panel-drive">
+    <div class="sec-head"><span class="accent-bar"></span><h2>雲端硬碟</h2></div>
+    <div class="card">
+      <div class="drive-wrap">
+        <div class="drive-side" id="drive-side">
+          <div class="side-lbl">我的硬碟</div>
+          <div class="side-item on" data-folder="所有檔案" onclick="selFolder(this)"><i class="ti ti-folder-filled" style="color:var(--accent)"></i>所有檔案</div>
+          <div class="side-item" data-folder="教學素材" onclick="selFolder(this)"><i class="ti ti-book"></i>教學素材</div>
+          <div class="side-item" data-folder="學生作業" onclick="selFolder(this)"><i class="ti ti-clipboard"></i>學生作業</div>
+          <div class="side-item" data-folder="考試卷" onclick="selFolder(this)"><i class="ti ti-file-text"></i>考試卷</div>
+          <div class="side-item" data-folder="照片" onclick="selFolder(this)"><i class="ti ti-photo"></i>照片</div>
+          <div class="side-item" data-folder="垃圾桶" onclick="selFolder(this)"><i class="ti ti-trash"></i>垃圾桶</div>
+          <div id="extra-folders"></div>
+        </div>
+        <div class="drive-main">
+          <div class="drive-tb">
+            <button class="btn btn-a" onclick="document.getElementById('fu').click()"><i class="ti ti-upload"></i>上傳</button>
+            <input type="file" id="fu" multiple style="display:none" onchange="doUpload(this)"/>
+            <button class="btn btn-g" onclick="mkFolder()"><i class="ti ti-folder-plus"></i>新資料夾</button>
+            <input class="drive-srch" type="text" placeholder="搜尋檔案…" oninput="searchF(this.value)"/>
+            <span class="fbpill fboff" id="drive-fb-badge">本機</span>
+          </div>
+          <div class="files-area">
+            <div class="drag-hint"><i class="ti ti-drag-drop" style="font-size:15px"></i>拖曳到左側資料夾快速分類</div>
+            <div class="fgrid" id="fgrid"></div>
+          </div>
+          <div class="srow">
+            <i class="ti ti-database" style="font-size:14px;color:var(--txt3)"></i>
+            <div class="sbar"><div class="sfill" id="sfill" style="width:34%"></div></div>
+            <span class="slbl" id="slbl">計算中…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="panel" id="panel-notes">
+    <div class="notes-tb">
+      <span class="notes-ttl"><i class="ti ti-note"></i>我的便利貼</span>
+      <div class="cdots">
+        <div class="cdot on" style="background:#f5c264" onclick="pickClr(this,'#f5c264')"></div>
+        <div class="cdot" style="background:#5ecfad" onclick="pickClr(this,'#5ecfad')"></div>
+        <div class="cdot" style="background:#7ab8f5" onclick="pickClr(this,'#7ab8f5')"></div>
+        <div class="cdot" style="background:#f4a0b8" onclick="pickClr(this,'#f4a0b8')"></div>
+        <div class="cdot" style="background:#a8d672" onclick="pickClr(this,'#a8d672')"></div>
+        <div class="cdot" style="background:#c9a0f5" onclick="pickClr(this,'#c9a0f5')"></div>
+      </div>
+      <span class="notes-sync" id="notes-sync-lbl"><i class="ti ti-cloud-off"></i>&nbsp;本機儲存</span>
+      <button class="btn btn-a" onclick="addNote()" style="padding:8px 16px"><i class="ti ti-plus"></i>新增</button>
+    </div>
+    <div class="ngrid" id="ngrid"></div>
+  </div>
+
+  <!-- TRANS -->
+  <div class="panel" id="panel-trans">
+    <div class="sec-head"><span class="accent-bar"></span><h2>英文翻譯小幫手</h2></div>
+    <div class="card">
+      <div class="mode-bar">
+        <span style="font-size:12px;color:var(--txt3);margin-right:4px">模式：</span>
+        <button class="mode-btn on" onclick="setMode('zh-en',this)">中文 → 英文</button>
+        <button class="mode-btn" onclick="setMode('en-zh',this)">英文 → 中文</button>
+        <button class="mode-btn" onclick="setMode('en-en',this)">英英釋義</button>
+        <button class="mode-btn" onclick="setMode('zh-zh',this)">中文說明</button>
+        <span style="margin-left:auto;font-size:12px" id="trans-api-lbl"></span>
+      </div>
+      <div class="trans-body">
+        <div class="tpane">
+          <div class="thd">
+            <span class="tlang" id="lbl-in"><i class="ti ti-circle-letter-z" style="color:var(--accent);font-size:18px"></i>中文輸入</span>
+            <button class="btn btn-g" style="padding:5px 11px;font-size:12px" onclick="clearT()">清除</button>
+          </div>
+          <textarea class="tta" id="t-in" placeholder="在此輸入文字…" oninput="document.getElementById('cc').textContent=this.value.length+' 字'"></textarea>
+          <div class="tft">
+            <button class="btn btn-a" onclick="doTrans()"><i class="ti ti-language"></i>翻譯</button>
+            <span id="cc" style="font-size:12px;color:var(--txt3);margin-left:auto">0 字</span>
+          </div>
+        </div>
+        <div class="tdiv">
+          <button class="swap-btn" onclick="swapLang()" title="交換語言"><i class="ti ti-arrows-exchange"></i></button>
+        </div>
+        <div class="tpane">
+          <div class="thd">
+            <span class="tlang" id="lbl-out"><i class="ti ti-circle-letter-e" style="color:var(--accent2);font-size:18px"></i>英文輸出</span>
+            <button class="btn btn-g" style="padding:5px 11px;font-size:12px" onclick="copyT()" id="copy-btn"><i class="ti ti-copy" style="font-size:13px"></i>複製</button>
+          </div>
+          <textarea class="tta res" id="t-out" placeholder="翻譯結果將顯示於此…" readonly></textarea>
+          <div class="tft">
+            <button class="qchip" onclick="qp('請打開課本第幾頁')">📖 課本指令</button>
+            <button class="qchip" onclick="qp('請安靜，注意聽講')">🤫 課堂用語</button>
+            <button class="qchip" onclick="qp('今天的功課是')">📝 作業說明</button>
+            <button class="qchip" onclick="qp('你答對了，做得很好')">⭐ 鼓勵語句</button>
+          </div>
+        </div>
+      </div>
+      <div class="t-extra" id="t-extra">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <span class="ex-word" id="ex-word"></span>
+          <div class="ex-phon"><span id="ex-ipa" style="font-family:serif"></span><button class="speak-btn" onclick="speak()"><i class="ti ti-volume"></i>發音</button></div>
+        </div>
+        <div class="ex-list" id="ex-list"></div>
+      </div>
+      <div class="api-warn" id="api-warn" style="display:none">⚠️ 尚未設定 OpenAI API Key，翻譯無法使用。請點右上角「設定」輸入您的金鑰。</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* CFG */
+var CFG={openaiKey:localStorage.getItem('cfg_openai')||'',fbApiKey:localStorage.getItem('cfg_fb_apikey')||'',fbProject:localStorage.getItem('cfg_fb_project')||'',fbAuth:localStorage.getItem('cfg_fb_auth')||''};
+function openSettings(){document.getElementById('cfg-openai').value=CFG.openaiKey;document.getElementById('cfg-fb-apikey').value=CFG.fbApiKey;document.getElementById('cfg-fb-project').value=CFG.fbProject;document.getElementById('cfg-fb-auth').value=CFG.fbAuth;document.getElementById('settings-modal').classList.remove('hidden');}
+function closeSettings(){document.getElementById('settings-modal').classList.add('hidden');}
+function saveSettings(){CFG.openaiKey=document.getElementById('cfg-openai').value.trim();CFG.fbApiKey=document.getElementById('cfg-fb-apikey').value.trim();CFG.fbProject=document.getElementById('cfg-fb-project').value.trim();CFG.fbAuth=document.getElementById('cfg-fb-auth').value.trim();localStorage.setItem('cfg_openai',CFG.openaiKey);localStorage.setItem('cfg_fb_apikey',CFG.fbApiKey);localStorage.setItem('cfg_fb_project',CFG.fbProject);localStorage.setItem('cfg_fb_auth',CFG.fbAuth);closeSettings();updateStatusUI();alert('設定已儲存！');}
+function updateStatusUI(){
+  var b=document.getElementById('fb-status-badge'),db=document.getElementById('drive-fb-badge'),sl=document.getElementById('notes-sync-lbl'),al=document.getElementById('trans-api-lbl'),w=document.getElementById('api-warn');
+  if(window._fbReady){b.innerHTML='<i class="ti ti-circle-filled" style="font-size:8px"></i>Firebase 同步中';b.className='hbadge ok';if(db){db.textContent='雲端同步';db.className='fbpill fbon';}if(sl)sl.innerHTML='<i class="ti ti-cloud"></i>&nbsp;Firebase 同步';}
+  else{b.innerHTML='<i class="ti ti-circle-filled" style="font-size:8px"></i>本機模式';b.className='hbadge off';if(db){db.textContent='本機';db.className='fbpill fboff';}if(sl)sl.innerHTML='<i class="ti ti-cloud-off"></i>&nbsp;本機儲存';}
+  if(CFG.openaiKey){if(al)al.innerHTML='<span style="color:var(--accent)">✓ OpenAI 已設定</span>';if(w)w.style.display='none';}
+  else{if(al)al.innerHTML='<span style="color:var(--txt3)">未設定 API Key</span>';if(w)w.style.display='block';}
+}
+setTimeout(updateStatusUI,600);
+
+/* TAB */
+function swTab(t,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('panel-'+t).classList.add('on');btn.classList.add('on');if(t==='trans')updateStatusUI();}
+
+/* YT */
+function getYTId(u){var m=u.match(/(?:youtu\.be\/|[?&]v=)([A-Za-z0-9_-]{11})/);if(m)return m[1];if(/^[A-Za-z0-9_-]{11}$/.test(u.trim()))return u.trim();return null;}
+function loadYT(){var raw=document.getElementById('yt-url').value.trim();var id=getYTId(raw);if(!id){alert('請輸入有效的 YouTube 網址');return;}var iframe=document.getElementById('yt-if');document.getElementById('yt-ph').style.display='none';document.getElementById('yt-err').style.display='none';iframe.style.display='none';iframe.src='';setTimeout(function(){iframe.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&modestbranding=1&enablejsapi=1';iframe.style.display='block';},100);}
+function openYT(){var u=document.getElementById('yt-url').value.trim();if(!u){alert('請先貼上 YouTube 網址');return;}if(!u.startsWith('http'))u='https://youtu.be/'+u;window.open(u,'_blank');}
+function setSpd(s,btn){document.querySelectorAll('.sp-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');try{document.getElementById('yt-if').contentWindow.postMessage(JSON.stringify({event:'command',func:'setPlaybackRate',args:[s]}),'*');}catch(e){}}
+window.addEventListener('message',function(e){if(e.data&&typeof e.data==='string'){try{var d=JSON.parse(e.data);if(d.info&&d.info.errorCode){document.getElementById('yt-if').style.display='none';document.getElementById('yt-err').style.display='flex';}}catch(x){}}});
+
+/* DRIVE */
+var files=JSON.parse(localStorage.getItem('drive_files')||'[]');
+if(!files.length){files=[{id:'f1',name:'期末考題.docx',size:'245 KB',type:'doc',folder:'考試卷'},{id:'f2',name:'第三單元投影片.pptx',size:'3.2 MB',type:'ppt',folder:'教學素材'},{id:'f3',name:'教學計畫書.pdf',size:'1.1 MB',type:'pdf',folder:'教學素材'},{id:'f4',name:'班級合照.jpg',size:'4.8 MB',type:'img',folder:'照片'},{id:'f5',name:'示範實驗影片.mp4',size:'87 MB',type:'vid',folder:'教學素材'},{id:'f6',name:'作業評分表.xlsx',size:'128 KB',type:'doc',folder:'學生作業'}];saveFilesLocal();}
+var curFolder='所有檔案',dragFid=null;
+var iconM={doc:'ti-file-text',pdf:'ti-file-type-pdf',img:'ti-photo',vid:'ti-video',ppt:'ti-presentation',other:'ti-file'};
+function getType(n){var e=n.split('.').pop().toLowerCase();if(['doc','docx','xls','xlsx'].includes(e))return'doc';if(e==='pdf')return'pdf';if(['jpg','jpeg','png','gif','webp'].includes(e))return'img';if(['mp4','mov','avi','mkv'].includes(e))return'vid';if(['ppt','pptx'].includes(e))return'ppt';return'other';}
+function fmtB(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(0)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB';}
+function saveFilesLocal(){localStorage.setItem('drive_files',JSON.stringify(files));}
+function updStorage(){var total=15*1024*1024*1024;var used=5.1*1024*1024*1024+files.filter(f=>f.addedBytes).reduce((s,f)=>s+(f.addedBytes||0),0);document.getElementById('sfill').style.width=Math.min(100,used/total*100).toFixed(1)+'%';document.getElementById('slbl').textContent=fmtB(used)+' / 15 GB 已使用';}
+window.renderFilesFromFB=function(){if(window._fbFiles&&window._fbFiles.length){files=window._fbFiles;saveFilesLocal();renderFiles();}};
+function renderFiles(list){var g=document.getElementById('fgrid');g.innerHTML='';(list||files).filter(f=>curFolder==='所有檔案'||f.folder===curFolder).forEach(function(f){var d=document.createElement('div');d.className='fc';d.draggable=true;d.dataset.id=f.id;d.title='點擊預覽';d.innerHTML='<button class="del" onclick="delFile(\''+f.id+'\');event.stopPropagation()">×</button><div class="fi '+f.type+'"><i class="ti '+(iconM[f.type]||'ti-file')+'"></i></div><div class="fn" title="'+f.name+'">'+f.name+'</div><div class="fs">'+f.size+'</div>';d.addEventListener('click',function(e){if(e.target.classList.contains('del'))return;openPrev(f);});d.addEventListener('dragstart',function(e){dragFid=f.id;d.classList.add('dragging');e.dataTransfer.effectAllowed='move';});d.addEventListener('dragend',function(){d.classList.remove('dragging');dragFid=null;});g.appendChild(d);});updStorage();}
+
+/* PREVIEW */
+var iconColors={doc:'rgba(90,160,240,0.15)',pdf:'rgba(240,96,96,0.15)',img:'rgba(62,207,142,0.15)',vid:'rgba(240,128,80,0.15)',ppt:'rgba(240,168,64,0.15)',other:'rgba(130,130,150,0.15)'};
+var iconTextColors={doc:'var(--accent2)',pdf:'var(--red)',img:'var(--accent)',vid:'#f08050',ppt:'var(--amber)',other:'var(--txt3)'};
+function openPrev(f){
+  var overlay=document.getElementById('prev-overlay');
+  var icon=document.getElementById('prev-hd-icon');
+  var nm=document.getElementById('prev-hd-name');
+  var meta=document.getElementById('prev-hd-meta');
+  var body=document.getElementById('prev-body');
+  var acts=document.getElementById('prev-actions');
+  icon.style.background=iconColors[f.type]||iconColors.other;
+  icon.style.color=iconTextColors[f.type]||iconTextColors.other;
+  icon.innerHTML='<i class="ti '+(iconM[f.type]||'ti-file')+'"></i>';
+  nm.textContent=f.name;
+  meta.textContent=f.size+' · '+f.folder;
+  body.innerHTML='';
+  acts.innerHTML='<button class="btn btn-g" onclick="hidePrev()"><i class="ti ti-x"></i>關閉</button>';
+  if(f.type==='img'&&f.dataUrl){
+    body.style.padding='20px';
+    body.innerHTML='<img class="prev-img" src="'+f.dataUrl+'" alt="'+f.name+'"/>';
+    acts.innerHTML='<button class="btn btn-g" onclick="hidePrev()"><i class="ti ti-x"></i>關閉</button><a class="btn btn-a" href="'+f.dataUrl+'" download="'+f.name+'"><i class="ti ti-download"></i>下載</a>';
+  } else if(f.type==='img'){
+    body.style.padding='40px';
+    body.innerHTML='<div class="prev-info"><div class="prev-info-icon" style="color:var(--accent)"><i class="ti ti-photo"></i></div><div class="prev-info-label">圖片預覽</div><div class="prev-info-sub">此為示範檔案，沒有實際圖片資料。<br>上傳真實圖片後可即時預覽。</div></div>';
+  } else if(f.type==='pdf'&&f.dataUrl){
+    body.style.padding='0';
+    body.innerHTML='<iframe class="prev-pdf" src="'+f.dataUrl+'" title="'+f.name+'"></iframe>';
+    acts.innerHTML='<button class="btn btn-g" onclick="hidePrev()"><i class="ti ti-x"></i>關閉</button><a class="btn btn-a" href="'+f.dataUrl+'" download="'+f.name+'"><i class="ti ti-download"></i>下載</a>';
+  } else if(f.type==='vid'&&f.dataUrl){
+    body.style.padding='0';
+    body.innerHTML='<video class="prev-vid" controls src="'+f.dataUrl+'"></video>';
+    acts.innerHTML='<button class="btn btn-g" onclick="hidePrev()"><i class="ti ti-x"></i>關閉</button><a class="btn btn-a" href="'+f.dataUrl+'" download="'+f.name+'"><i class="ti ti-download"></i>下載</a>';
+  } else {
+    body.style.padding='0';
+    var typeLabel={doc:'Word / Excel 文件',pdf:'PDF 文件',img:'圖片',vid:'影片',ppt:'簡報',other:'檔案'};
+    var ext=f.name.split('.').pop().toUpperCase();
+    body.innerHTML='<div class="prev-info">'+
+      '<div class="prev-info-icon" style="color:'+iconTextColors[f.type]+'"><i class="ti '+(iconM[f.type]||'ti-file')+'"></i></div>'+
+      '<div class="prev-info-label">'+f.name+'</div>'+
+      '<div class="prev-info-sub">'+(f.dataUrl?'':'此為示範資料，上傳真實檔案後可顯示更多資訊。')+'</div>'+
+      '<div class="prev-info-rows">'+
+        '<div class="prev-info-row"><span>檔案類型</span><span>'+ext+' · '+(typeLabel[f.type]||'一般檔案')+'</span></div>'+
+        '<div class="prev-info-row"><span>大小</span><span>'+f.size+'</span></div>'+
+        '<div class="prev-info-row"><span>資料夾</span><span>'+f.folder+'</span></div>'+
+        (f.uploadDate?'<div class="prev-info-row"><span>上傳日期</span><span>'+f.uploadDate+'</span></div>':'')+
+      '</div></div>';
+    if(f.dataUrl)acts.innerHTML='<button class="btn btn-g" onclick="hidePrev()"><i class="ti ti-x"></i>關閉</button><a class="btn btn-a" href="'+f.dataUrl+'" download="'+f.name+'"><i class="ti ti-download"></i>下載</a>';
+  }
+  overlay.classList.remove('hidden');
+}
+function hidePrev(){document.getElementById('prev-overlay').classList.add('hidden');var b=document.getElementById('prev-body');b.innerHTML='';b.style.padding='';}
+function closePrev(e){if(e.target===document.getElementById('prev-overlay'))hidePrev();}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')hidePrev();});
+function setupFolderDrop(){document.querySelectorAll('.side-item[data-folder]').forEach(function(item){item.ondragover=function(e){e.preventDefault();item.classList.add('drag-ov');};item.ondragleave=function(){item.classList.remove('drag-ov');};item.ondrop=function(e){e.preventDefault();item.classList.remove('drag-ov');if(!dragFid)return;var folder=item.dataset.folder;if(folder==='垃圾桶'){if(confirm('移至垃圾桶？'))delFile(dragFid);return;}if(folder==='所有檔案')return;files=files.map(f=>f.id===dragFid?{...f,folder:folder}:f);saveFilesLocal();if(window._saveFile){var upd=files.find(f=>f.id===dragFid);if(upd)window._saveFile(upd);}renderFiles();};});}
+function selFolder(el){document.querySelectorAll('.side-item').forEach(i=>i.classList.remove('on'));el.classList.add('on');curFolder=el.dataset.folder||el.textContent.trim();renderFiles();}
+function doUpload(inp){
+  var today=new Date();var dateStr=(today.getMonth()+1)+'/'+(today.getDate());
+  var previewTypes=['img','pdf','vid'];
+  Array.from(inp.files).forEach(function(f){
+    var id='f'+Date.now()+Math.random().toString(36).slice(2);
+    var obj={id:id,name:f.name,size:fmtB(f.size),type:getType(f.name),folder:curFolder==='所有檔案'?'教學素材':curFolder,addedBytes:f.size,uploadDate:dateStr};
+    files.unshift(obj);
+    if(window._saveFile)window._saveFile({id:obj.id,name:obj.name,size:obj.size,type:obj.type,folder:obj.folder,uploadDate:obj.uploadDate});
+    if(previewTypes.includes(obj.type)&&f.size<20*1024*1024){
+      (function(fileRef, objRef){
+        var reader=new FileReader();
+        reader.onload=function(e){
+          objRef.dataUrl=e.target.result;
+          saveFilesLocal();
+          renderFiles();
+        };
+        reader.readAsDataURL(fileRef);
+      })(f, obj);
+    }
+  });
+  saveFilesLocal();
+  renderFiles();
+  inp.value='';
+}
+function delFile(id){if(!confirm('確定刪除？'))return;files=files.filter(f=>f.id!==id);saveFilesLocal();if(window._deleteFile)window._deleteFile(id);renderFiles();}
+function searchF(q){renderFiles(files.filter(f=>f.name.includes(q)));}
+function mkFolder(){var n=prompt('資料夾名稱：');if(!n)return;var ex=document.getElementById('extra-folders');var d=document.createElement('div');d.className='side-item';d.dataset.folder=n;d.onclick=function(){selFolder(d);};d.innerHTML='<i class="ti ti-folder"></i>'+n;ex.appendChild(d);setupFolderDrop();}
+renderFiles();setTimeout(setupFolderDrop,300);
+
+/* NOTES */
+var curClr='#f5c264';
+var notes=JSON.parse(localStorage.getItem('sticky_notes')||'[]');
+if(!notes.length){notes=[{id:'n1',text:'下週一 — 繳交第二單元學習單',color:'#f5c264',date:'5/6'},{id:'n2',text:'準備期中考複習講義\n✓ 單字表\n✓ 文法整理',color:'#5ecfad',date:'5/5'},{id:'n3',text:'聯絡家長：王小明出席率問題',color:'#f4a0b8',date:'5/4'}];saveNotesLocal();}
+function saveNotesLocal(){localStorage.setItem('sticky_notes',JSON.stringify(notes));}
+window.renderNotesFromFB=function(){if(window._fbNotes&&window._fbNotes.length){notes=window._fbNotes;saveNotesLocal();renderNotes();}};
+function pickClr(el,c){document.querySelectorAll('.cdot').forEach(d=>d.classList.remove('on'));el.classList.add('on');curClr=c;}
+function renderNotes(){var g=document.getElementById('ngrid');g.innerHTML='';notes.forEach(function(n){var d=document.createElement('div');d.className='sn';d.style.background=n.color;d.innerHTML='<button class="sn-del" onclick="delNote(\''+n.id+'\')">×</button><textarea class="sn-txt" onchange="updNote(\''+n.id+'\',this.value)">'+n.text+'</textarea><div class="sn-date">'+n.date+'</div>';g.appendChild(d);});}
+function addNote(){var dt=new Date();var lbl=(dt.getMonth()+1)+'/'+(dt.getDate());var id='n'+Date.now();var note={id:id,text:'',color:curClr,date:lbl};notes.unshift(note);saveNotesLocal();if(window._saveNote)window._saveNote(note);renderNotes();setTimeout(function(){var t=document.querySelector('.sn-txt');if(t)t.focus();},50);}
+function delNote(id){if(!confirm('刪除便利貼？'))return;notes=notes.filter(n=>n.id!==id);saveNotesLocal();if(window._deleteNote)window._deleteNote(id);renderNotes();}
+function updNote(id,v){notes=notes.map(n=>n.id===id?{...n,text:v}:n);saveNotesLocal();if(window._saveNote){var upd=notes.find(n=>n.id===id);if(upd)window._saveNote(upd);}}
+renderNotes();
+
+/* TRANS */
+var transMode='zh-en';
+var modeConfig={'zh-en':{in:'中文輸入',out:'英文輸出',inIcon:'z',outIcon:'e',inClr:'var(--accent)',outClr:'var(--accent2)',outLang:'en-US',sys:'你是專業英文老師。請將以下中文翻譯成自然流暢的英文，只回覆翻譯結果，不要加任何解釋。如果是單詞，請附上音標（IPA）和三個例句（英文+中文），格式：\n翻譯：[英文]\n音標：[IPA]\n例句1：[英文] / [中文]\n例句2：[英文] / [中文]\n例句3：[英文] / [中文]'},'en-zh':{in:'英文輸入',out:'中文輸出',inIcon:'e',outIcon:'z',inClr:'var(--accent2)',outClr:'var(--accent)',outLang:'zh-TW',sys:'你是專業翻譯。請將以下英文翻譯成自然流暢的繁體中文，只回覆翻譯結果，不要加任何解釋。如果是單詞，請附上音標（IPA）和三個例句，格式：\n翻譯：[中文]\n音標：[IPA]\n例句1：[英文] / [中文]\n例句2：[英文] / [中文]\n例句3：[英文] / [中文]'},'en-en':{in:'英文輸入',out:'英英釋義',inIcon:'e',outIcon:'e',inClr:'var(--accent2)',outClr:'var(--accent2)',outLang:'en-US',sys:'你是英英辭典。請用英文解釋以下單字或句子的意思，並提供音標（IPA）和三個例句，格式：\n定義：[英文解釋]\n音標：[IPA]\n例句1：[英文] / [中文]\n例句2：[英文] / [中文]\n例句3：[英文] / [中文]'},'zh-zh':{in:'中文輸入',out:'中文說明',inIcon:'z',outIcon:'z',inClr:'var(--accent)',outClr:'var(--accent)',outLang:'zh-TW',sys:'你是繁體中文老師。請用簡單易懂的繁體中文說明以下詞語或句子的意思，並提供使用情境說明。'}};
+function setMode(m,btn){transMode=m;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');var c=modeConfig[m];document.getElementById('lbl-in').innerHTML='<i class="ti ti-circle-letter-'+c.inIcon+'" style="color:'+c.inClr+';font-size:18px"></i>'+c.in;document.getElementById('lbl-out').innerHTML='<i class="ti ti-circle-letter-'+c.outIcon+'" style="color:'+c.outClr+';font-size:18px"></i>'+c.out;document.getElementById('t-in').value='';document.getElementById('t-out').value='';document.getElementById('t-extra').style.display='none';document.getElementById('cc').textContent='0 字';}
+var quickPhrases={'請打開課本第幾頁':{zh:'請打開課本第幾頁'},'請安靜，注意聽講':{zh:'請安靜，注意聽講'},'今天的功課是':{zh:'今天的功課是'},'你答對了，做得很好':{zh:'你答對了，做得很好'}};
+function qp(k){var p=quickPhrases[k];if(!p)return;document.getElementById('t-in').value=p.zh;document.getElementById('cc').textContent=p.zh.length+' 字';document.getElementById('t-out').value='';document.getElementById('t-extra').style.display='none';doTrans();}
+async function doTrans(){
+  var inp=document.getElementById('t-in').value.trim();if(!inp)return;
+  var out=document.getElementById('t-out'),extra=document.getElementById('t-extra');extra.style.display='none';
+  if(!CFG.openaiKey){out.value='⚠ 請先設定 OpenAI API Key（右上角「設定」）';document.getElementById('api-warn').style.display='block';return;}
+  out.value='翻譯中…';out.classList.add('blink');
+  var c=modeConfig[transMode];
+  try{
+    var resp=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+CFG.openaiKey},body:JSON.stringify({model:'gpt-4o-mini',max_tokens:600,messages:[{role:'system',content:c.sys},{role:'user',content:inp}]})});
+    var data=await resp.json();
+    if(data.error){out.value='錯誤：'+data.error.message;out.classList.remove('blink');return;}
+    var result=data.choices[0].message.content.trim();out.classList.remove('blink');
+    if(result.includes('翻譯：')||result.includes('定義：')){
+      var lines=result.split('\n'),translation='',ipa='',examples=[];
+      lines.forEach(function(l){if(l.startsWith('翻譯：')||l.startsWith('定義：'))translation=l.replace(/^(翻譯|定義)：/,'').trim();else if(l.startsWith('音標：'))ipa=l.replace('音標：','').trim();else if(/^例句\d：/.test(l)){var pts=l.replace(/^例句\d：/,'').split(' / ');examples.push(pts.length===2?{en:pts[0].trim(),zh:pts[1].trim()}:{en:pts[0].trim(),zh:''});}});
+      out.value=translation||result;
+      if(ipa||examples.length){document.getElementById('ex-word').textContent=translation||inp;document.getElementById('ex-ipa').textContent=ipa;var exH='';examples.forEach(function(ex){exH+='<div class="ex-card"><div class="ex-en">'+ex.en+'</div>'+(ex.zh?'<div class="ex-zh">'+ex.zh+'</div>':'')+'</div>';});document.getElementById('ex-list').innerHTML=exH;extra.style.display='block';window._speakText=translation||inp;window._speakLang=c.outLang;}
+    }else{out.value=result;}
+  }catch(e){out.classList.remove('blink');out.value='連線錯誤：'+e.message;}
+}
+function clearT(){document.getElementById('t-in').value='';document.getElementById('t-out').value='';document.getElementById('cc').textContent='0 字';document.getElementById('t-extra').style.display='none';}
+function copyT(){var t=document.getElementById('t-out').value;if(!t)return;navigator.clipboard.writeText(t).then(function(){var b=document.getElementById('copy-btn');b.innerHTML='<i class="ti ti-check" style="font-size:13px"></i>已複製';setTimeout(function(){b.innerHTML='<i class="ti ti-copy" style="font-size:13px"></i>複製';},1500);}).catch(function(){alert('請手動複製');});}
+function swapLang(){var a=document.getElementById('t-in').value,b=document.getElementById('t-out').value;document.getElementById('t-in').value=b;document.getElementById('t-out').value=a;}
+function speak(){var text=window._speakText||document.getElementById('t-out').value;var lang=window._speakLang||'en-US';if(!text)return;window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.lang=lang;window.speechSynthesis.speak(u);}
+</script>
+</body>
+</html>
