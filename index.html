@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>個人教學平台</title>
+<title>我的教學平台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
@@ -308,29 +308,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="lock-err hidden" id="lock-err">密碼錯誤，請再試一次</div>
     <div class="lock-hint">
       預設密碼：<strong>teacher2025</strong><br>
-      <span style="font-size:11px;color:var(--txt3)">可在下方修改密碼，密碼以 SHA-256 加密儲存於本機</span>
+      <span style="font-size:11px;color:var(--txt3)">進入後可在右上角「設定」修改密碼</span>
     </div>
-    <div class="lock-change-wrap">
-      <button class="lock-change-btn" onclick="showChangePwd()"><i class="ti ti-key" style="font-size:13px"></i>修改密碼</button>
-    </div>
-  </div>
-</div>
 
-<!-- CHANGE PASSWORD MODAL -->
-<div class="modal-overlay hidden" id="change-pwd-modal">
-  <div class="modal" style="max-width:400px">
-    <h2><i class="ti ti-key"></i>修改密碼</h2>
-    <label>目前密碼</label>
-    <input type="password" id="cp-current" placeholder="輸入目前密碼"/>
-    <label>新密碼 <span style="color:var(--red)">*</span></label>
-    <input type="password" id="cp-new" placeholder="至少 6 個字元"/>
-    <label>確認新密碼</label>
-    <input type="password" id="cp-confirm" placeholder="再輸入一次新密碼"/>
-    <div class="modal-note" id="cp-err" style="color:var(--red);min-height:18px"></div>
-    <div class="modal-actions">
-      <button class="btn btn-g" onclick="document.getElementById('change-pwd-modal').classList.add('hidden')">取消</button>
-      <button class="btn btn-a" onclick="doChangePwd()"><i class="ti ti-check"></i>確認修改</button>
-    </div>
   </div>
 </div>
 
@@ -348,9 +328,39 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <label>Firebase Auth Domain</label>
     <input type="text" id="cfg-fb-auth" placeholder="your-project.firebaseapp.com"/>
     <div class="modal-note">Firebase 用於便利貼與檔案清單跨裝置同步。未設定則使用本機儲存。</div>
+
+    <!-- 修改密碼區塊 -->
+    <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--bdr);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span style="font-size:13px;font-weight:500;color:var(--txt);display:flex;align-items:center;gap:7px;">
+          <i class="ti ti-lock" style="color:var(--accent)"></i>網頁密碼鎖
+        </span>
+        <span style="font-size:11px;color:var(--txt3)">防止他人開啟使用</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:11px;color:var(--txt2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">目前密碼</label>
+          <input type="password" id="cp-current" placeholder="輸入目前密碼" style="width:100%;padding:9px 12px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--txt2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">新密碼（至少6位）</label>
+          <input type="password" id="cp-new" placeholder="輸入新密碼" style="width:100%;padding:9px 12px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;"/>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <label style="font-size:11px;color:var(--txt2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">確認新密碼</label>
+        <input type="password" id="cp-confirm" placeholder="再輸入一次新密碼" style="width:100%;padding:9px 12px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--bg3);color:var(--txt);font-size:14px;font-family:inherit;"/>
+      </div>
+      <div id="cp-err" style="font-size:12px;color:var(--red);min-height:18px;margin-top:6px;"></div>
+      <button onclick="doChangePwd()" style="margin-top:8px;padding:8px 16px;background:var(--bg4);color:var(--txt);border:1px solid var(--bdr);border-radius:var(--r);font-size:13px;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--txt)'">
+        <i class="ti ti-key"></i>更新密碼
+      </button>
+      <div style="margin-top:10px;font-size:11px;color:var(--txt3)">預設密碼：<code style="background:var(--bg3);padding:2px 7px;border-radius:4px;color:var(--accent)">teacher2025</code>（首次使用請在此修改）</div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-g" onclick="closeSettings()">取消</button>
-      <button class="btn btn-a" onclick="saveSettings()"><i class="ti ti-device-floppy"></i>儲存</button>
+      <button class="btn btn-a" onclick="saveSettings()"><i class="ti ti-device-floppy"></i>儲存 API 設定</button>
     </div>
   </div>
 </div>
@@ -751,10 +761,6 @@ function speak(){var text=window._speakText||document.getElementById('t-out').va
     var icon = document.getElementById('lock-eye-icon');
     if(inp.type==='password'){ inp.type='text'; icon.className='ti ti-eye-off'; }
     else { inp.type='password'; icon.className='ti ti-eye'; }
-  };
-
-  window.showChangePwd = function(){
-    document.getElementById('change-pwd-modal').classList.remove('hidden');
   };
 
   window.doChangePwd = async function(){
